@@ -1,0 +1,91 @@
+{
+  "name": "css-module-navigator",
+  "displayName": "CSS Module Navigator",
+  "description": "Navigate to css module file on import click",
+  "homepage": "https://github.com/WambaCarles000/css-module-navigator#readme",
+  "bugs": {
+    "url": "https://github.com/WambaCarles000/css-module-navigator/issues"
+  },
+  "version": "0.0.1",
+  "publisher": "wamba-carles",
+  "author": "Wamba Carles",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WambaCarles000/css-module-navigator.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Development",
+    "Snippets",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescriptreact"
+  ],
+  "keywords": [
+    "css",
+    "css-modules",
+    "module",
+    "navigator",
+    "navigation",
+    "import",
+    "stylesheet",
+    "scss",
+    "sass",
+    "jsconfig",
+    "tsconfig",
+    "path-alias",
+    "alias",
+    "quick-navigation"
+  ],
+  "icon": "icon.png",
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "css-module-navigator.openCssModule",
+        "title": "Open CSS Module File"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "css-module-navigator.openCssModule",
+        "key": "ctrl+alt+c",
+        "mac": "cmd+alt+c",
+        "when": "editorTextFocus"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "css-module-navigator.openCssModule",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "css-module-navigator.openCssModule"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "vscode-test",
+    "package": "vsce package",
+    "vscode:prepublish": "yarn lint"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.100.0",
+    "@types/node": "20.x",
+    "eslint": "^9.25.1",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}
