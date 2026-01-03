@@ -69,3 +69,7 @@ The extension will automatically search for configuration files in subdirectorie
 ### 0.0.1
 
 Initial release with support for relative imports and path aliases.
+
+
+
+If you find this useful, consider leaving a ⭐ on the Marketplace

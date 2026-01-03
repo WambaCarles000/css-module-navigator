@@ -3,12 +3,13 @@ const fs = require('fs');
 const path = require('path');
 
 function findConfigFile(startDir, workspaceRoot) {
-  // Remonte depuis le répertoire du fichier jusqu'à la racine du workspace
+  // Remonte depuis le répertoire du fichier jusqu'à la racine du workspace 
+  // go up from the file directory to the workspace root
   let currentDir = startDir;
   const rootPath = path.resolve(workspaceRoot);
   
   while (currentDir && currentDir !== path.dirname(currentDir)) {
-    // Vérifie si on a dépassé la racine du workspace
+    // Check if we have passed the workspace root
     if (!currentDir.startsWith(rootPath)) {
       break;
     }
@@ -23,7 +24,7 @@ function findConfigFile(startDir, workspaceRoot) {
       return { configPath: jsconfigPath, projectRoot: currentDir };
     }
     
-    // Remonte d'un niveau
+    // Go up one level
     currentDir = path.dirname(currentDir);
   }
   
@@ -31,29 +32,29 @@ function findConfigFile(startDir, workspaceRoot) {
 }
 
 function getJsconfigPaths(startDir, workspaceRoot) {
-  console.log('🔍 Recherche de jsconfig/tsconfig depuis:', startDir);
+  console.log('🔍 Search for jsconfig/tsconfig from:', startDir);
   console.log('   Workspace root:', workspaceRoot);
   
   const configResult = findConfigFile(startDir, workspaceRoot);
   
   if (!configResult) {
-    console.log('⚠️ Aucun fichier de configuration trouvé');
+    console.log('⚠️ No configuration file found');
     return {};
   }
   
   const { configPath, projectRoot } = configResult;
-  console.log(`  ✓ Fichier trouvé: ${configPath}`);
-  console.log(`  📁 Racine du projet: ${projectRoot}`);
+  console.log(`  ✓ File found: ${configPath}`);
+  console.log(`  📁 Project root: ${projectRoot}`);
   
   try {
     let raw = fs.readFileSync(configPath, 'utf8');
-    
-    // Nettoie le JSON : retire les virgules traînantes et les commentaires
-    // Retire les commentaires de ligne (// ...)
+  
+    // Clean the JSON: remove trailing commas and comments
+    // Remove trailing commas and comments
     raw = raw.replace(/\/\/.*$/gm, '');
-    // Retire les commentaires de bloc (/* ... */)
+    // Remove block comments (/* ... */)
     raw = raw.replace(/\/\*[\s\S]*?\*\//g, '');
-    // Retire les virgules traînantes dans les objets et tableaux
+    // Remove trailing commas in objects and arrays
     raw = raw.replace(/,(\s*[}\]])/g, '$1');
     
     const config = JSON.parse(raw);
@@ -66,203 +67,203 @@ function getJsconfigPaths(startDir, workspaceRoot) {
     console.log('  paths:', paths);
     
     if (Object.keys(paths).length === 0) {
-      console.log('  ⚠️ Aucun path trouvé dans compilerOptions.paths');
+      console.log('  ⚠️ No paths found in compilerOptions.paths');
       return {};
     }
     
     const resolvedPaths = {};
 
     for (const alias in paths) {
-      // Nettoie l'alias : retire le * à la fin
+      // Clean the alias: remove the * at the end
       let cleanAlias = alias.replace(/\*$/, '');
       
-      // Nettoie la cible : retire le * à la fin
+      // Clean the target: remove the * at the end
       const target = paths[alias][0].replace(/\*$/, '');
       const resolvedTarget = path.resolve(projectRoot, baseUrl, target);
       
       console.log(`  Alias: "${alias}" -> "${cleanAlias}" -> "${resolvedTarget}"`);
       
-      // Stocke l'alias tel quel (sans slash) - la normalisation se fera lors du matching
+      // Store the alias as is (without slash) - the normalization will be done during the matching
       resolvedPaths[cleanAlias] = resolvedTarget;
       
-      // Stocke aussi avec slash si l'alias n'en a pas déjà un
-      // Cela permet de matcher à la fois "@/styles" et "@/styles/"
+      // Store also with slash if the alias doesn't already have one
+      // This allows to match "@/styles" and "@/styles/"
       if (!cleanAlias.endsWith('/')) {
         resolvedPaths[cleanAlias + '/'] = resolvedTarget;
       }
     }
 
-    console.log('✅ Alias résolus:', resolvedPaths);
+    console.log('✅ Resolved aliases:', resolvedPaths);
     return resolvedPaths;
   } catch (err) {
-    console.error(`❌ Erreur lecture ${path.basename(configPath)}:`, err);
+    console.error(`❌ Error reading ${path.basename(configPath)}:`, err);
     console.error('  Stack:', err.stack);
     return {};
   }
 }
 
 function resolveImportPath(importPath, aliasMap, currentFileDir, _workspaceRoot) {
-  console.log('Résolution du chemin:', importPath);
-  console.log('Répertoire courant:', currentFileDir);
+  console.log('Resolution of the path:', importPath);
+  console.log('Current directory:', currentFileDir);
   
   // Gère les imports relatifs (./ ou ../)
   if (importPath.startsWith('./') || importPath.startsWith('../')) {
     const resolved = path.resolve(currentFileDir, importPath);
-    console.log('Chemin résolu (relatif):', resolved);
+    console.log('Resolved path (relative):', resolved);
     
-    // Fonction helper pour tester un chemin
+    // Helper function to test a path
     const tryResolve = (basePath) => {
-      // Si le chemin contient déjà .module.css, vérifie directement
+      // If the path contains .module.css, check directly
       if (importPath.includes('.module.')) {
         if (fs.existsSync(basePath)) {
-          console.log('✓ Fichier trouvé:', basePath);
+          console.log('✓ File found:', basePath);
           return basePath;
         }
         
-        // Essaie différentes extensions
+        // Try different extensions
         const extensions = ['.css', '.scss', '.sass'];
         for (const ext of extensions) {
           const withExt = basePath.replace(/\.(css|scss|sass)$/, ext);
           if (fs.existsSync(withExt)) {
-            console.log('✓ Fichier trouvé avec extension:', withExt);
+            console.log('✓ File found with extension:', withExt);
             return withExt;
           }
         }
       } else {
-        // Si pas d'extension, essaie avec .module.css
+        // If no extension, try with .module.css
         const withCss = basePath + '.module.css';
         if (fs.existsSync(withCss)) {
-          console.log('✓ Fichier trouvé:', withCss);
+          console.log('✓ File found:', withCss);
           return withCss;
         }
         
         const withScss = basePath + '.module.scss';
         if (fs.existsSync(withScss)) {
-          console.log('✓ Fichier trouvé:', withScss);
+          console.log('✓ File found:', withScss);
           return withScss;
         }
         
         const withSass = basePath + '.module.sass';
         if (fs.existsSync(withSass)) {
-          console.log('✓ Fichier trouvé:', withSass);
+          console.log('✓ File found:', withSass);
           return withSass;
         }
         
-        // Essaie index.module.css dans le dossier
+          // Try index.module.css in the directory
         const indexCss = path.join(basePath, 'index.module.css');
         if (fs.existsSync(indexCss)) {
-          console.log('✓ Fichier trouvé:', indexCss);
+          console.log('✓ File found:', indexCss);
           return indexCss;
         }
       }
       return null;
     };
     
-    // Essaie d'abord le chemin résolu tel quel
+    // Try the resolved path as is
     let result = tryResolve(resolved);
     if (result) return result;
     
-    // Si ça ne fonctionne pas et que le chemin commence par ../, essaie aussi avec ./
+    // If it doesn't work and the path starts with ../, try also with ./
     if (importPath.startsWith('../')) {
       const altPath = importPath.replace(/^\.\.\//, './');
       const altResolved = path.resolve(currentFileDir, altPath);
-      console.log('Tentative alternative (../ -> ./):', altResolved);
+      console.log('Alternative attempt (../ -> ./):', altResolved);
       result = tryResolve(altResolved);
       if (result) return result;
       
-      // Essaie aussi sans préfixe
+      // Try also without prefix
       const noPrefixPath = importPath.replace(/^\.\.\//, '');
       const noPrefixResolved = path.resolve(currentFileDir, noPrefixPath);
-      console.log('Tentative alternative (sans ../):', noPrefixResolved);
+      console.log('Alternative attempt (without ../):', noPrefixResolved);
       result = tryResolve(noPrefixResolved);
       if (result) return result;
     }
     
-    console.log('✗ Fichier non trouvé pour le chemin relatif:', resolved);
+    console.log('✗ File not found for the relative path:', resolved);
   }
 
-  // Gère les imports avec alias
-  // Trie les alias par longueur décroissante pour matcher le plus long d'abord
+  // Handle imports with aliases
+  // Sort aliases by decreasing length to match the longest first
   const sortedAliases = Object.keys(aliasMap).sort((a, b) => b.length - a.length);
   
-  // Normalise l'import pour le matching
+  // Normalize the import for the matching
   let normalizedImport = importPath;
-  // Si l'import commence par @ mais pas @/, normalise vers @/
+  // If the import starts with @ but not @/, normalize to @/
   if (normalizedImport.startsWith('@') && !normalizedImport.startsWith('@/')) {
     normalizedImport = normalizedImport.replace(/^@([^/])/, '@/$1');
   }
   
   for (const alias of sortedAliases) {
-    // Normalise l'alias : s'assure qu'il se termine par / pour un matching correct
+    // Normalize the alias: ensure it ends with / for a correct matching
     const normalizedAlias = alias.endsWith('/') ? alias : alias + '/';
     
-    // Vérifie si l'import commence par l'alias normalisé
+    // Check if the import starts with the normalized alias
     if (normalizedImport.startsWith(normalizedAlias)) {
-      // Extrait le suffixe après l'alias (sans le slash)
+        // Extract the suffix after the alias (without the slash)
       const suffix = normalizedImport.slice(normalizedAlias.length);
       
-      // Résout le chemin complet
+      // Resolve the full path
       const resolved = path.resolve(aliasMap[alias], suffix);
-      console.log(`Tentative avec alias "${alias}" (normalisé: "${normalizedAlias}")`);
-      console.log(`  Import: "${importPath}" -> normalisé: "${normalizedImport}"`);
-      console.log(`  Suffixe: "${suffix}"`);
-      console.log(`  Chemin résolu: "${resolved}"`);
+      console.log(`Attempt with alias "${alias}" (normalized: "${normalizedAlias}")`);
+      console.log(`  Import: "${importPath}" -> normalized: "${normalizedImport}"`);
+      console.log(`  Suffix: "${suffix}"`);
+      console.log(`  Resolved path: "${resolved}"`);
       
-      // Vérifie si le fichier existe tel quel
+      // Check if the file exists as is
       if (fs.existsSync(resolved)) {
-        console.log('✓ Fichier trouvé:', resolved);
+        console.log('✓ File found:', resolved);
         return resolved;
       }
 
-      // Si le chemin résolu se termine déjà par .module.css/scss/sass, on a fini
+      // If the resolved path already ends with .module.css/scss/sass, we're done
       if (resolved.endsWith('.module.css') || resolved.endsWith('.module.scss') || resolved.endsWith('.module.sass')) {
-        console.log('✗ Fichier non trouvé (extension déjà présente):', resolved);
+        console.log('✗ File not found (extension already present):', resolved);
         continue;
       }
 
-      // Essaie avec l'extension .module.css
+      // Try with the .module.css extension
       const withCss = resolved + '.module.css';
       if (fs.existsSync(withCss)) {
-        console.log('✓ Fichier trouvé avec .module.css:', withCss);
+        console.log('✓ File found with .module.css:', withCss);
         return withCss;
       }
 
-      // Essaie avec .module.scss
+      // Try with the .module.scss extension
       const withScss = resolved + '.module.scss';
       if (fs.existsSync(withScss)) {
-        console.log('✓ Fichier trouvé avec .module.scss:', withScss);
+        console.log('✓ File found with .module.scss:', withScss);
         return withScss;
       }
 
-      // Essaie avec .module.sass
+      // Try with the .module.sass extension
       const withSass = resolved + '.module.sass';
       if (fs.existsSync(withSass)) {
-        console.log('✓ Fichier trouvé avec .module.sass:', withSass);
+        console.log('✓ File found with .module.sass:', withSass);
         return withSass;
       }
 
-      // Essaie index.module.css (si le dossier est importé directement)
+      // Try index.module.css (if the directory is imported directly)
       const indexCss = path.join(resolved, 'index.module.css');
       if (fs.existsSync(indexCss)) {
-        console.log('✓ Fichier trouvé: index.module.css:', indexCss);
+        console.log('✓ File found: index.module.css:', indexCss);
         return indexCss;
       }
       
-      console.log('✗ Aucune variante trouvée pour:', resolved);
+      console.log('✗ No variant found for:', resolved);
     }
   }
 
-  console.log('Aucun fichier trouvé pour:', importPath);
+  console.log('No file found for:', importPath);
   return null;
 }
 
 function activate(context) {
   if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
-    vscode.window.showWarningMessage('CSS Module Navigator nécessite un workspace ouvert.');
+    vscode.window.showWarningMessage('CSS Module Navigator requires an open workspace.');
     return;
   }
   
-  console.log('📦 Workspace folders:', vscode.workspace.workspaceFolders.map(f => f.uri.fsPath));
+    console.log('📦 Workspace folders:', vscode.workspace.workspaceFolders.map(f => f.uri.fsPath));
 
   const disposable = vscode.commands.registerCommand('css-module-navigator.openCssModule', () => {
     const editor = vscode.window.activeTextEditor;
@@ -272,18 +273,18 @@ function activate(context) {
     const selection = editor.selection;
     const line = document.lineAt(selection.active.line).text;
 
-    // Regex améliorée pour capturer différents formats d'import (avec ou sans 'from')
+    // Improved regex to capture different import formats (with or without 'from')
     const match = line.match(/import\s+(?:\w+\s+from\s+)?['"]([^'"]+\.module\.(css|scss|sass))['"]/);
     
     if (!match) {
-      vscode.window.showInformationMessage('Aucun import CSS Module trouvé sur cette ligne.');
+      vscode.window.showInformationMessage('No CSS Module import found on this line.');
       return;
     }
 
     const importPath = match[1];
     const currentFileDir = path.dirname(document.fileName);
     
-    // Trouve le workspace root qui contient le fichier actuel
+    // Find the workspace root that contains the current file
     let workspaceRoot = null;
     if (vscode.workspace.workspaceFolders) {
       for (const folder of vscode.workspace.workspaceFolders) {
@@ -292,23 +293,23 @@ function activate(context) {
           break;
         }
       }
-      // Si aucun workspace ne contient le fichier, utilise le premier
+      // If no workspace contains the file, use the first one
       if (!workspaceRoot) {
         workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
       }
     }
     
-    console.log('📁 Workspace root utilisé:', workspaceRoot);
-    console.log('📄 Fichier actuel:', document.fileName);
+    console.log('📁 Used workspace root:', workspaceRoot);
+    console.log('📄 Current file:', document.fileName);
     
-    // Reconstruit l'alias map à chaque fois pour être sûr d'avoir les dernières configs
-    // Passe le répertoire du fichier actuel pour chercher le config depuis là
+    // Rebuild the alias map every time to be sure to have the latest configs
+    // Pass the current file directory to search the config from there
     const aliasMap = getJsconfigPaths(currentFileDir, workspaceRoot);
     const resolvedPath = resolveImportPath(importPath, aliasMap, currentFileDir, workspaceRoot);
 
     if (!resolvedPath) {
-      // Affiche plus d'informations pour le debug
-      const debugInfo = `Chemin introuvable pour : ${importPath}\nRépertoire courant: ${currentFileDir}\nAlias disponibles: ${Object.keys(aliasMap).join(', ')}`;
+      // Show more information for debugging
+      const debugInfo = `Path not found for: ${importPath}\nCurrent directory: ${currentFileDir}\nAvailable aliases: ${Object.keys(aliasMap).join(', ')}`;
       vscode.window.showErrorMessage(debugInfo);
       console.error('Debug - Import path:', importPath);
       console.error('Debug - Current dir:', currentFileDir);
@@ -319,7 +320,7 @@ function activate(context) {
     vscode.workspace.openTextDocument(resolvedPath).then(doc => {
       vscode.window.showTextDocument(doc);
     }, err => {
-      vscode.window.showErrorMessage(`Impossible d'ouvrir le fichier : ${err.message}`);
+      vscode.window.showErrorMessage(`Unable to open file: ${err.message}`);
     });
   });
 
